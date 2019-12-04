@@ -1,3 +1,6 @@
+from multiprocessing import Pool
+
+
 def as_digits(number):
     one = number % 10
     ten = int(number / 10) % 10
@@ -9,7 +12,8 @@ def as_digits(number):
     return h_tho, t_tho, tho, hun, ten, one
 
 
-def meets_criteria_pt1(digits):
+def meets_criteria_pt1(number):
+    digits = as_digits(number)
     if decreases(digits):
         return False
     if has_multiple(digits):
@@ -17,7 +21,8 @@ def meets_criteria_pt1(digits):
     return False
 
 
-def meets_criteria_pt2(digits):
+def meets_criteria_pt2(number):
+    digits = as_digits(number)
     if decreases(digits):
         return False
     if has_double(digits):
@@ -54,16 +59,16 @@ def decreases(digits):
 
 
 def test_meets_criteria_pt1():
-    assert meets_criteria_pt1(as_digits(111111))
-    assert meets_criteria_pt1(as_digits(223450)) is False
-    assert meets_criteria_pt1(as_digits(123789)) is False
+    assert meets_criteria_pt1(111111)
+    assert meets_criteria_pt1(223450) is False
+    assert meets_criteria_pt1(123789) is False
 
 
 def test_meets_criteria_pt2():
-    assert meets_criteria_pt2(as_digits(112233))
-    assert meets_criteria_pt2(as_digits(111122))
-    assert meets_criteria_pt2(as_digits(123444)) is False
-    assert meets_criteria_pt2(as_digits(124449)) is False
+    assert meets_criteria_pt2(112233)
+    assert meets_criteria_pt2(111122)
+    assert meets_criteria_pt2(123444) is False
+    assert meets_criteria_pt2(124449) is False
 
 
 def test_as_digits():
@@ -74,16 +79,10 @@ def test_as_digits():
 
 
 def test_answer_part_1():
-    passwords = 0
-    for number in range(137683, 596253):
-        if meets_criteria_pt1(as_digits(number)):
-            passwords += 1
-    assert passwords == 1864
+    with Pool() as p:
+        assert sum(p.map(meets_criteria_pt1, range(137683, 596253))) == 1864
 
 
 def test_answer_part_2():
-    passwords = 0
-    for number in range(137683, 596253):
-        if meets_criteria_pt2(as_digits(number)):
-            passwords += 1
-    assert passwords == 1258
+    with Pool() as p:
+        assert sum(p.map(meets_criteria_pt2, range(137683, 596253))) == 1258
