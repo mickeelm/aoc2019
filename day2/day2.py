@@ -12,13 +12,13 @@ def process(intcode):
     return intcode
 
 
-def brute_force(intcode, ouput):
+def brute_force(intcode, output):
     for noun in range(0, 100):
         for verb in range(0, 100):
             copy = intcode.copy()
             copy[1] = noun
             copy[2] = verb
-            if process(copy)[0] == ouput:
+            if process(copy)[0] == output:
                 return noun * 100 + verb
 
 
