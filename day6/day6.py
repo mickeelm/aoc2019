@@ -29,8 +29,8 @@ def orbital_transfer(map_entries, start_id, goal_id):
     while True:
         start_obj = start_obj.base if start_obj.base else start_obj
         goal_obj = goal_obj.base if goal_obj.base else goal_obj
-        start_path.append(start_obj.name)
-        goal_path.append(goal_obj.name)
+        start_path.append(start_obj)
+        goal_path.append(goal_obj)
         common = list(set(start_path) & set(goal_path))
         if common:
             return start_path.index(common[0]) + goal_path.index(common[0])
