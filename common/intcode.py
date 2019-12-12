@@ -70,16 +70,10 @@ class IntCode:
         self.position += 2
 
     def jump_if_true(self, value_p1, value_p2):
-        if value_p1:
-            self.position = value_p2
-        else:
-            self.position += 3
+        self.position = value_p2 if value_p1 else self.position + 3
 
     def jump_if_false(self, value_p1, value_p2):
-        if not value_p1:
-            self.position = value_p2
-        else:
-            self.position += 3
+        self.position = value_p2 if not value_p1 else self.position + 3
 
     def less_than(self, value_p1, value_p2):
         self.store_one_or_zero(value_p1 < value_p2)

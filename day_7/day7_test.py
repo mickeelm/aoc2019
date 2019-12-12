@@ -16,7 +16,7 @@ def test_max_thruster_single_mode():
 
 def test_part_1():
     with open('input') as f:
-        program = [int(x) for x in f.read().split(',')]
+        program = [int(instruction) for instruction in f.read().split(',')]
         phase_settings = permutations([0, 1, 2, 3, 4])
         assert max([max_thruster_single_mode(program, phase_setting) for phase_setting in phase_settings]) == 24625
 
@@ -33,6 +33,6 @@ def test_max_thruster_loop_mode():
 
 def test_part_2():
     with open('input') as f:
-        program = [int(x) for x in f.read().split(',')]
+        program = [int(instruction) for instruction in f.read().split(',')]
         phase_settings = permutations([5, 6, 7, 8, 9])
         assert max([max_thruster_loop_mode(program, phase_setting) for phase_setting in phase_settings]) == 36497698
