@@ -10,48 +10,79 @@ class NoInputProvidedError(Exception):
 
 
 class IntCode:
+
     def __init__(self, program):
         self.program = to_dictionary(program)
         self.position = 0
         self.base_offset = 0
+        self.operations = self.init_operations()
         self.input_instructions = deque()
         self.output_values = deque()
 
+    def init_operations(self):
+        operations = {1: self.addition, 2: self.multiplication, 3: self.input, 4: self.output, 5: self.jump_if_true,
+                      6: self.jump_if_false, 7: self.less_than, 8: self.equals, 9: self.adjust_base}
+        return operations
+
     def run(self, suspend_on_output=False):
         while (instruction := self.program[self.position]) != 99:
-            opcode, mode_p1, mode_p2, mode_p3 = parse_instruction(instruction)
-            store_pos = self.get_store_pos(mode_p1, 1)
-            if opcode == 3:
-                self.input(store_pos)
-                continue
-            value_p1 = self.get_value(mode_p1, 1)
-            if opcode == 4:
-                self.output(value_p1)
-                if suspend_on_output:
-                    return
-                continue
-            if opcode == 9:
-                self.adjust_base(value_p1)
-                continue
-            value_p2 = self.get_value(mode_p2, 2)
-            if opcode == 5:
-                self.jump_if_true(value_p1, value_p2)
-                continue
-            if opcode == 6:
-                self.jump_if_false(value_p1, value_p2)
-                continue
-            store_pos = self.get_store_pos(mode_p3, 3)
-            if opcode == 1:
-                self.addition(value_p1, value_p2, store_pos)
-            elif opcode == 2:
-                self.multiplication(value_p1, value_p2, store_pos)
-            elif opcode == 7:
-                self.less_than(value_p1, value_p2, store_pos)
-            elif opcode == 8:
-                self.equals(value_p1, value_p2, store_pos)
-            else:
-                raise RuntimeError(f'Unknown opcode: {opcode}')
+            opcode = instruction % 10
+            func_call = self.operations[opcode]
+            func_call(instruction)
+            if opcode == 4 and suspend_on_output:
+                return
         return
+
+    def addition(self, instruction):
+        self.store_func_of_two_values(instruction, lambda x, y: x + y)
+
+    def multiplication(self, instruction):
+        self.store_func_of_two_values(instruction, lambda x, y: x * y)
+
+    def store_func_of_two_values(self, instruction, function):
+        value_p1, value_p2, store_pos = self.get_two_values_and_store_pos(instruction)
+        self.program[store_pos] = function(value_p1, value_p2)
+        self.position += 4
+
+    def input(self, instruction):
+        mode_p1 = parse_instruction(instruction, 1)
+        store_pos = self.get_store_pos(mode_p1, 1)
+        try:
+            self.program[store_pos] = self.input_instructions.popleft()
+            self.position += 2
+        except IndexError:
+            raise NoInputProvidedError
+
+    def output(self, instruction):
+        value_p1 = self.get_one_value(instruction)
+        self.output_values.append(value_p1)
+        self.position += 2
+
+    def jump_if_true(self, instruction):
+        self.jump(instruction, lambda x: x)
+
+    def jump_if_false(self, instruction):
+        self.jump(instruction, lambda x: not x)
+
+    def jump(self, instruction, function):
+        value_p1, value_p2 = self.get_two_values(instruction)
+        self.position = value_p2 if function(value_p1) else self.position + 3
+
+    def less_than(self, instruction):
+        self.store_one_or_zero(instruction, lambda x, y: x < y)
+
+    def equals(self, instruction):
+        self.store_one_or_zero(instruction, lambda x, y: x == y)
+
+    def store_one_or_zero(self, instruction, function):
+        value_p1, value_p2, store_pos = self.get_two_values_and_store_pos(instruction)
+        self.program[store_pos] = 1 if function(value_p1, value_p2) else 0
+        self.position += 4
+
+    def adjust_base(self, instruction):
+        value_p1 = self.get_one_value(instruction)
+        self.base_offset += value_p1
+        self.position += 2
 
     def get_value(self, mode, position_offset):
         if mode == 0:
@@ -67,44 +98,23 @@ class IntCode:
         elif mode == 2:
             return self.base_offset + self.program[self.position + position_offset]
 
-    def addition(self, value_p1, value_p2, store_pos):
-        self.program[store_pos] = value_p1 + value_p2
-        self.position += 4
+    def get_one_value(self, instruction):
+        mode_p1 = parse_instruction(instruction, 1)
+        value_p1 = self.get_value(mode_p1, 1)
+        return value_p1
 
-    def multiplication(self, value_p1, value_p2, store_pos):
-        self.program[store_pos] = value_p1 * value_p2
-        self.position += 4
+    def get_two_values(self, instruction):
+        mode_p1, mode_p2 = parse_instruction(instruction, 2)
+        value_p1 = self.get_value(mode_p1, 1)
+        value_p2 = self.get_value(mode_p2, 2)
+        return value_p1, value_p2
 
-    def input(self, store_pos):
-        try:
-            self.program[store_pos] = self.input_instructions.popleft()
-            self.position += 2
-        except IndexError:
-            raise NoInputProvidedError
-
-    def output(self, value_p1):
-        self.output_values.append(value_p1)
-        self.position += 2
-
-    def jump_if_true(self, value_p1, value_p2):
-        self.position = value_p2 if value_p1 else self.position + 3
-
-    def jump_if_false(self, value_p1, value_p2):
-        self.position = value_p2 if not value_p1 else self.position + 3
-
-    def less_than(self, value_p1, value_p2, store_pos):
-        self.store_one_or_zero(value_p1 < value_p2, store_pos)
-
-    def equals(self, value_p1, value_p2, store_pos):
-        self.store_one_or_zero(value_p1 == value_p2, store_pos)
-
-    def adjust_base(self, value_p1):
-        self.base_offset += value_p1
-        self.position += 2
-
-    def store_one_or_zero(self, store_one, store_pos):
-        self.program[store_pos] = 1 if store_one else 0
-        self.position += 4
+    def get_two_values_and_store_pos(self, instruction):
+        mode_p1, mode_p2, mode_p3 = parse_instruction(instruction)
+        value_p1 = self.get_value(mode_p1, 1)
+        value_p2 = self.get_value(mode_p2, 2)
+        store_pos = self.get_store_pos(mode_p3, 3)
+        return value_p1, value_p2, store_pos
 
     def queue_input(self, value):
         self.input_instructions.append(value)
@@ -122,12 +132,15 @@ class IntCode:
             raise ProgramTerminatedError
 
 
-def parse_instruction(instruction):
-    opcode = instruction % 10
+def parse_instruction(instruction, modes_required=3):
     param_1_mode = int(instruction / 100) % 10
+    if modes_required == 1:
+        return param_1_mode
     param_2_mode = int(instruction / 1000) % 10
+    if modes_required == 2:
+        return param_1_mode, param_2_mode
     param_3_mode = int(instruction / 10000) % 10
-    return opcode, param_1_mode, param_2_mode, param_3_mode
+    return param_1_mode, param_2_mode, param_3_mode
 
 
 def to_dictionary(program_list):
@@ -136,4 +149,3 @@ def to_dictionary(program_list):
     for address, value in enumerate(program_list):
         program_dict[address] = value
     return program_dict
-
