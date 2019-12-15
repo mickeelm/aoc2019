@@ -12,7 +12,10 @@ class NoInputProvidedError(Exception):
 class IntCode:
 
     def __init__(self, program):
-        self.program = to_dictionary(program)
+        self.program = program.copy()
+        self.program_memory_size = len(self.program)
+        # noinspection PyArgumentList
+        self.extended_memory = defaultdict(int)
         self.position = 0
         self.base_offset = 0
         self.operations = self.init_operations()
@@ -41,14 +44,17 @@ class IntCode:
 
     def store_func_of_two_values(self, instruction, function):
         value_p1, value_p2, store_pos = self.get_two_values_and_store_pos(instruction)
-        self.program[store_pos] = function(value_p1, value_p2)
+        self.store(store_pos, function(value_p1, value_p2))
         self.position += 4
 
     def input(self, instruction):
         mode_p1 = parse_instruction(instruction, 1)
         store_pos = self.get_store_pos(mode_p1, 1)
         try:
-            self.program[store_pos] = self.input_instructions.popleft()
+            if store_pos < self.program_memory_size:
+                self.program[store_pos] = self.input_instructions.popleft()
+            else:
+                self.extended_memory[store_pos] = self.input_instructions.popleft()
             self.position += 2
         except IndexError:
             raise NoInputProvidedError
@@ -76,7 +82,7 @@ class IntCode:
 
     def store_one_or_zero(self, instruction, function):
         value_p1, value_p2, store_pos = self.get_two_values_and_store_pos(instruction)
-        self.program[store_pos] = 1 if function(value_p1, value_p2) else 0
+        self.store(store_pos, 1 if function(value_p1, value_p2) else 0)
         self.position += 4
 
     def adjust_base(self, instruction):
@@ -85,12 +91,22 @@ class IntCode:
         self.position += 2
 
     def get_value(self, mode, position_offset):
+        value_at_pos = self.program[self.position + position_offset]
         if mode == 0:
-            return self.program[self.program[self.position + position_offset]]
+            return self.program[value_at_pos] if value_at_pos < self.program_memory_size else \
+                self.extended_memory[value_at_pos]
         elif mode == 1:
-            return self.program[self.position + position_offset]
+            return value_at_pos
         elif mode == 2:
-            return self.program[self.base_offset + self.program[self.position + position_offset]]
+            value_base_offset_adj = self.base_offset + value_at_pos
+            return self.program[value_base_offset_adj] if value_base_offset_adj < self.program_memory_size else \
+                self.extended_memory[value_base_offset_adj]
+
+    def store(self, store_pos, value):
+        if store_pos < self.program_memory_size:
+            self.program[store_pos] = value
+        else:
+            self.extended_memory[store_pos] = value
 
     def get_store_pos(self, mode, position_offset):
         if mode == 0:
@@ -141,11 +157,3 @@ def parse_instruction(instruction, modes_required=3):
         return param_1_mode, param_2_mode
     param_3_mode = int(instruction / 10000) % 10
     return param_1_mode, param_2_mode, param_3_mode
-
-
-def to_dictionary(program_list):
-    # noinspection PyArgumentList
-    program_dict = defaultdict(int)
-    for address, value in enumerate(program_list):
-        program_dict[address] = value
-    return program_dict
