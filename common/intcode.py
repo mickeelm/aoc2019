@@ -51,10 +51,7 @@ class IntCode:
         mode_p1 = parse_instruction(instruction, 1)
         store_pos = self.get_store_pos(mode_p1, 1)
         try:
-            if store_pos < self.program_memory_size:
-                self.program[store_pos] = self.input_instructions.popleft()
-            else:
-                self.extended_memory[store_pos] = self.input_instructions.popleft()
+            self.store(store_pos, self.input_instructions.popleft())
             self.position += 2
         except IndexError:
             raise NoInputProvidedError
