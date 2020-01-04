@@ -1,4 +1,4 @@
-from day_12.day12 import Moon, take_steps, total_energy_level
+from day_12.day12 import Moon, take_steps, total_energy_level, first_repeat_step
 
 
 def test_answer_1():
@@ -7,10 +7,28 @@ def test_answer_1():
     assert total_energy_level(start_state, 1000) == 12466
 
 
+def test_answer_2():
+    with open('input') as start_stream:
+        start_state = [Moon(line.rstrip()) for line in start_stream.readlines()]
+    assert first_repeat_step(start_state) == 360689156787864
+
+
 def test_energy_level_input_1():
     with open('test_inputs/test_input_1') as start_stream:
         start_state = [Moon(line.rstrip()) for line in start_stream.readlines()]
     assert total_energy_level(start_state, 10) == 179
+
+
+def test_first_repeat_step_test_input_1():
+    with open('test_inputs/test_input_1') as start_stream:
+        start_state = [Moon(line.rstrip()) for line in start_stream.readlines()]
+    assert first_repeat_step(start_state) == 2772
+
+
+def test_first_repeat_step_test_input_2():
+    with open('test_inputs/test_input_2') as start_stream:
+        start_state = [Moon(line.rstrip()) for line in start_stream.readlines()]
+    assert first_repeat_step(start_state) == 4686774924
 
 
 def test_energy_level_input_2():
